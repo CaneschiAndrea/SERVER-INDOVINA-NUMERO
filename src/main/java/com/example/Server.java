@@ -1,55 +1,67 @@
 package com.example;
 
+import java.util.*;
 import java.net.*;
 import java.io.*;
-import java.util.Random;
 
 public class Server {
-    public void startServer() {
+    ServerSocket server = null;
+    Socket client = null;
+    int numeroDaIndovinare;
+    BufferedReader inDalClient;
+    DataOutputStream outVersoClient;
+
+    public Socket attendi() {
         try {
-            ServerSocket serverSocket = new ServerSocket(3000);
-            System.out.println("Server in attesa di connessione...");
+            System.out.println("SERVER in esecuzione...");
+            server = new ServerSocket(3000);
+            client = server.accept();
+            server.close();
+
+            inDalClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
+            outVersoClient = new DataOutputStream(client.getOutputStream());
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            System.out.println("Errore durante l'istanza del server!");
+            System.exit(1);
+        }
+        return client;
+    }
+
+    public void comunica() {
+        try {
+            generaNumeroCasuale();
+            int tentativi = 0;
+
+            outVersoClient.writeBytes("Benvenuto! Indovina il numero (da 0 a 99):" + '\n');
 
             while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Connessione effettuata con il client.");
+                String stringaRicevuta = inDalClient.readLine();
+                int numeroIndovinato = Integer.parseInt(stringaRicevuta);
 
-                int numeroDaIndovinare = generaNumeroCasuale();
-                int tentativi = 0;
+                tentativi++;
 
-                BufferedReader inDalClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                DataOutputStream outVersoClient = new DataOutputStream(clientSocket.getOutputStream());
-
-                boolean indovinato = false;
-
-                while (!indovinato) {
-                    tentativi++;
-                    outVersoClient.writeBytes("Inserisci il numero:" + '\n');
-                    String stringaRicevuta = inDalClient.readLine();
-                    int numeroIndovinato = Integer.parseInt(stringaRicevuta);
-
-                    if (numeroIndovinato < numeroDaIndovinare) {
-                        outVersoClient.writeBytes("1\n"); // Numero troppo piccolo
-                    } else if (numeroIndovinato > numeroDaIndovinare) {
-                        outVersoClient.writeBytes("2\n"); // Numero troppo grande
-                    } else {
-                        outVersoClient.writeBytes("3\n"); // Numero indovinato
-                        indovinato = true;
-                    }
+                if (numeroIndovinato < numeroDaIndovinare) {
+                    outVersoClient.writeBytes("Il numero è troppo basso. Prova di nuovo:" + '\n');
+                } else if (numeroIndovinato > numeroDaIndovinare) {
+                    outVersoClient.writeBytes("Il numero è troppo alto. Prova di nuovo:" + '\n');
+                } else {
+                    outVersoClient.writeBytes("Congratulazioni! Hai indovinato il numero in " + tentativi + " tentativi." + '\n');
+                    break;
                 }
-
-                outVersoClient.writeBytes("4\n"); // Invio segnale di fine
-                System.out.println("HAI INDOVINATO IN " + tentativi + " tentativi");
-
-                clientSocket.close();
             }
-        } catch (IOException e) {
-            System.err.println("Errore durante l'esecuzione del server: " + e.getMessage());
+
+            System.out.println("Chiusura connessione");
+            client.close();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            System.out.println("Qualcosa è andato storto!");
+            System.exit(1);
         }
     }
 
-    public static int generaNumeroCasuale() {
+    public void generaNumeroCasuale() {
         Random rand = new Random();
-        return rand.nextInt(100) + 1; // Genera un numero tra 1 e 100
+        numeroDaIndovinare = rand.nextInt(100); // Modifica il limite a seconda del tuo gioco
     }
 }
